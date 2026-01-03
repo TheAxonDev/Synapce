@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synapce</title>
+    <link rel="icon" href="logo.png"> 
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body class="theme-minimal">
+
+    <div id="login-screen" class="screen">
+        <div class="glass-panel login-card">
+            <div class="logo-area">
+                <img src="logo.png" alt="Synapce" class="app-logo-large">
+                <h2>Synapce</h2>
+            </div>
+            <p class="subtitle">Neural Mesh Messenger</p>
+            
+            <div class="input-group">
+                <label for="my-id-input">Твой ID</label>
+                <input type="text" id="my-id-input" placeholder="например: neo-1" autocomplete="off">
+            </div>
+            
+            <button id="btn-login" class="btn-primary">
+                <span class="material-icons">power_settings_new</span> Подключиться
+            </button>
+            <p class="warning hint-text">ID должен быть уникальным.</p>
+        </div>
+    </div>
+
+    <div id="chat-screen" class="screen hidden">
+        
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <img src="logo.png" alt="S" class="app-logo-small">
+                    <span>Synapce</span>
+                </div>
+                <button id="btn-open-settings" class="btn-icon" title="Настройки"><span class="material-icons">settings</span></button>
+            </div>
+
+            <div class="my-profile-section">
+                <div class="my-avatar-container">
+                    <img id="my-avatar-display" src="default-avatar.png" alt="Me" class="avatar">
+                </div>
+                 <div class="my-info">
+                    <small>Ваш ID:</small>
+                    <div id="display-my-id" class="code-box" title="Нажмите, чтобы скопировать">...</div>
+                </div>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="connect-box section">
+                    <h3>Новый контакт</h3>
+                    <div class="flex-row">
+                        <input type="text" id="remote-id-input" placeholder="ID друга">
+                         <button id="btn-connect" class="btn-icon-primary" title="Подключиться"><span class="material-icons">person_add</span></button>
+                    </div>
+                </div>
+
+                <div class="call-box section">
+                     <h3>Голосовая связь</h3>
+                     <div class="call-controls">
+                         <button id="btn-start-call" class="btn-call green">
+                             <span class="material-icons">call</span> Start
+                        </button>
+                         <button id="btn-end-call" class="btn-call red hidden">
+                             <span class="material-icons">call_end</span> End
+                        </button>
+                     </div>
+                </div>
+
+                <div class="status-log section" id="status-log"></div>
+            </div>
+        </aside>
+
+        <main class="chat-area">
+            <header class="chat-header glass-panel-light">
+                <div class="header-info">
+                    <h3>Общий канал</h3>
+                    <span id="connection-count" class="badge">0 peers</span>
+                </div>
+            </header>
+
+            <div id="messages-container" class="messages-container custom-scroll">
+                <div class="system-msg">Ожидание подключения к Synapce...</div>
+            </div>
+<footer class="input-area glass-panel-light">
+                <input type="file" id="img-upload-input" accept="image/*" hidden>
+                <button id="btn-attach-img" class="btn-icon attachment-btn" disabled>
+                     <span class="material-icons">image</span>
+                </button>
+
+                <input type="text" id="msg-input" placeholder="Напишите сообщение..." disabled autocomplete="off">
+                <button id="btn-send" class="btn-send" disabled>
+                    <span class="material-icons">send</span>
+                </button>
+            </footer>
+        </main>
+    </div>
+
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h2>Настройки Synapce</h2>
+                <button id="btn-close-settings" class="btn-icon"><span class="material-icons">close</span></button>
+            </div>
+            <div class="modal-body">
+                 <div class="setting-group">
+                    <h3>Ваш Аватар</h3>
+                    <div class="avatar-upload-area">
+                        <img id="settings-avatar-preview" src="default-avatar.png" class="avatar large">
+                        <input type="file" id="avatar-input" accept="image/png, image/jpeg">
+                        <label for="avatar-input" class="btn-secondary">Загрузить фото</label>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Тема оформления</h3>
+                    <select id="theme-select" class="stylish-select">
+                        <option value="theme-minimal">Synapce Blue (Minimal)</option>
+                        <option value="theme-aero">Frutiger Aero</option>
+                        <option value="theme-metro-red">Metro Red</option>
+                        <option value="theme-metro-green">Metro Green</option>
+                        <option value="theme-metro-purple">Metro Purple</option>
+                        <option value="theme-liquid">Liquid Glass</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="remote-audio-container" hidden></div>
+    <script src="main.js"></script>
+</body>
+</html>
