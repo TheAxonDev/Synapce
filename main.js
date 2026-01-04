@@ -219,20 +219,174 @@ function broadcastMyAvatar() {
 // === P2P Logic (MAXIMUM AGGRESSION) ===
 
 // 1. Супер-список серверов для пробива NAT
-var aggressiveIceServers = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-    { urls: 'stun:stun.ekiga.net' },
-    { urls: 'stun:stun.ideasip.com' },
-    { urls: 'stun:stun.schlund.de' },
-    { urls: 'stun:stun.voiparound.com' },
-    { urls: 'stun:stun.voipbuster.com' },
-    { urls: 'stun:stun.voipstunt.com' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
-];
+// === P2P Logic (С ИСПОЛЬЗОВАНИЕМ TURN) ===
+
+function registerAndInitPeer() {
+    var id = els.myIdInput.value.trim();
+    if (!id) return log("Введите ID!", "error");
+
+    els.btnLogin.disabled = true;
+    els.btnLogin.innerText = 'Пробив NAT...';
+
+    if (peer) {
+        peer.destroy();
+        peer = null;
+    }
+
+    // === СЕКРЕТНОЕ ОРУЖИЕ: Бесплатный TURN сервер ===
+    // Это позволяет трафику идти через посредника, если прямой путь закрыт (4G)
+    var iceConfig = [
+        // Стандартные Google STUN (для легких сетей)
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        
+        // OpenRelay (Бесплатный TURN)
+        {
+            urls: [
+                "turn:openrelay.metered.ca:80",
+                "turn:openrelay.metered.ca:443", 
+                "turn:openrelay.metered.ca:80?transport=tcp", 
+                "turn:openrelay.metered.ca:443?transport=tcp"
+            ],
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        }
+    ];
+
+    peer = new Peer(id, {
+        host: '0.peerjs.com',
+        port: 443,
+        path: '/',
+        secure: true,
+        debug: 1,
+        config: {
+            iceServers: iceConfig,
+            sdpSemantics: 'unified-plan',
+            iceTransportPolicy: 'all' // Разрешаем всё
+        },
+        pingInterval: 5000
+    });
+
+    peer.on('open', function(pid) {
+        myId = pid;
+        log('Успех! ID: ' + myId, "success");
+        els.displayMyId.innerText = myId;
+        els.loginScreen.classList.add('hidden');
+        els.chatScreen.classList.remove('hidden');
+    });
+
+    peer.on('error', function(err) {
+        console.error(err);
+        var msg = "Ошибка: " + err.type;
+        if (err.type === 'peer-unavailable') msg = "Не удалось пробиться к пиру (NAT).";
+        if (err.type === 'network') msg = "Ошибка сети. Пробуем снова...";
+        
+        log(msg, "error");
+        
+        if (err.type === 'network' || err.type === 'disconnected') {
+            setTimeout(function() { if(peer) peer.reconnect(); }, 3000);
+        } else {
+            els.btnLogin.disabled = false;
+            els.btnLogin.innerText = 'Вход';
+        }
+    });
+
+    peer.on('connection', function(c) {
+        log('🔗 Соединение установлено: ' + c.peer);
+        setupConnectionHandlers(c);
+    });
+
+    peer.on('call', function(call) {
+        log('📞 Входящий звонок от ' + call.peer);
+        if (myStream) {
+            call.answer(myStream);
+            setupMediaCallHandlers(call);
+        } else {
+            log('Нажмите Start Call, чтобы ответить', 'info');
+        }
+    });
+}
+
+function connectToPeer() {
+    var rid = els.remoteIdInput.value.trim();
+    if (!rid || rid === myId) return;
+
+    log('⏳ Подключение (TURN)...');
+    
+    // Используем reliable передачу
+    var conn = peer.connect(rid, {
+        reliable: true,
+        serialization: 'json' 
+    });
+
+    // Таймер паники: если через 10 сек тишина - сброс
+    var panicTimer = setTimeout(function() {
+        if (!conn.open) {
+            log("⚠️ NAT не пробит. Попробуйте обновить страницу оба.", "error");
+            conn.close();
+        }
+    }, 10000);
+
+    setupConnectionHandlers(conn, panicTimer);
+}
+
+function setupConnectionHandlers(conn, timerId) {
+    conn.on('open', function() {
+        if (timerId) clearTimeout(timerId);
+        
+        if (connections[conn.peer]) return;
+        connections[conn.peer] = conn;
+        updateConnectionCount();
+        log('✅ Канал стабилен: ' + conn.peer, "success");
+        updateChatUIState(true);
+        
+        // Отправляем аватарку
+        conn.send({type: 'avatar-update', from: myId, data: appSettings.avatar});
+        
+        // Запускаем "сердцебиение", чтобы роутер не закрыл порт
+        startHeartbeat(conn);
+    });
+
+    conn.on('data', handleIncomingData);
+    conn.on('close', function() { handlePeerDisconnect(conn.peer); });
+    conn.on('error', function() { handlePeerDisconnect(conn.peer); });
+}
+function startHeartbeat(conn) {
+    var beat = setInterval(function() {
+        if (conn.open) {
+            conn.send({type: 'ping'});
+        } else {
+            clearInterval(beat);
+        }
+    }, 5000); // Стучим каждые 5 сек
+}
+
+function handleIncomingData(data) {
+    if (data.type === 'ping') return; // Игнорируем пинги
+    
+    var needNotify = false;
+    
+    if (data.type === 'chat') {
+        addMessageToUI(data.from, data.text, 'in');
+        needNotify = true;
+    } else if (data.type === 'image') {
+        addImageToUI(data.from, data.data, 'in');
+        needNotify = true;
+    } else if (data.type === 'avatar-update') {
+        peerAvatars[data.from] = data.data;
+    }
+
+    if (needNotify && document.hidden) {
+        playNotification();
+        var oldTitle = document.title;
+        document.title = "📩 Новое сообщение!";
+        var onFocus = function() {
+            document.title = oldTitle;
+            window.removeEventListener('focus', onFocus);
+        };
+        window.addEventListener('focus', onFocus);
+    }
+}
 
 function registerAndInitPeer() {
     var id = els.myIdInput.value.trim();
