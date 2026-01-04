@@ -355,103 +355,76 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 /* === МОБИЛЬНАЯ ОПТИМИЗАЦИЯ === */
 
-/* Скрываем мобильные кнопки на ПК */
+
 .mobile-only {
     display: none;
 }
 
-/* Настройки для экранов шириной до 768px (планшеты и телефоны) */
 @media (max-width: 768px) {
+    /* 1. Отключаем лишние украшательства */
+    body::before { display: none !important; }
+    body { background: var(--bg-main) !important; height: 100dvh; width: 100vw; overflow: hidden; } /* 100dvh - это важно для телефонов! */
     
-    /* 1. Отключаем фоны и блюр (По требованию) */
-    body::before {
-        display: none !important; /* Убираем картинку */
-    }
-    body {
-        background: var(--bg-main) !important; /* Простой плоский цвет */
-    }
     .glass-panel, .glass-panel-light {
-        backdrop-filter: none !important; /* Убираем нагружающий блюр */
-        background: var(--bg-secondary); /* Непрозрачный фон */
+        backdrop-filter: none !important;
+        background: var(--bg-secondary);
         box-shadow: none;
-        border-radius: 0; /* Убираем скругления, чтобы занимать весь экран */
         border: none;
+        border-radius: 0;
     }
 
-    /* 2. Показываем мобильные кнопки */
-    .mobile-only {
-        display: flex;
-    }
+    /* 2. Кнопки */
+    .mobile-only { display: flex; align-items: center; justify-content: center; }
 
-    /* 3. Переделываем Layout (Сетка) */
-    #chat-screen {
-        position: relative;
-        overflow: hidden;
-    }
-
-    /* Боковая панель (Шторка) */
+    /* 3. Шторка (Sidebar) */
     .sidebar {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 85%; /* Шторка не на весь экран, чтобы видеть, что сзади чат */
+        position: fixed; /* Фиксируем намертво */
+        top: 0; left: 0;
+        width: 85%;
         height: 100%;
-        z-index: 1000;
+        z-index: 2000; /* Очень высокий индекс, чтобы быть поверх всего */
         background: var(--bg-secondary);
         border-right: 1px solid var(--border-color);
-        
-        /* Анимация выезда */
         transform: translateX(-100%);
         transition: transform 0.3s ease-in-out;
+        display: flex; /* Возвращаем флекс, если он был убран */
     }
+    .sidebar.active { transform: translateX(0); box-shadow: 10px 0 50px rgba(0,0,0,0.5); }
 
-    /* Класс, который JS будет добавлять для открытия меню */
-    .sidebar.active {
-        transform: translateX(0);
-        box-shadow: 10px 0 50px rgba(0,0,0,0.5);
-    }
-
-    /* Чат на весь экран */
+    /* 4. Чат и Поле ввода */
     .chat-area {
         width: 100%;
-        height: 100%;
+        height: 100dvh; /* Высота экрана с учетом адресной строки */
+        display: flex;
+        flex-direction: column;
     }
 
-    /* 4. Улучшение UX для пальцев */
-    button, .btn-icon, .btn-primary {
-        min-height: 44px; /* Стандарт Apple для тач-интерфейсов */
-        min-width: 44px;
+    .messages-container {
+        flex: 1; /* Занимает всё свободное место */
+        overflow-y: auto;
+        padding-bottom: 10px;
     }
 
-    input[type="text"] {
-        font-size: 16px; /* Чтобы iOS не зумил экран при вводе */
-        padding: 12px;
+    .input-area {
+        flex-shrink: 0; /* Запрещаем сжимать поле ввода */
+        padding: 10px;
+        background: var(--bg-tertiary); /* Чтобы визуально отделить */
+        position: relative;
+        z-index: 10;
+        padding-bottom: env(safe-area-inset-bottom); /* Отступ для iPhone без кнопки */
     }
 
-    /* Увеличиваем ползунок громкости */
-    .volume-slider {
-        height: 8px;
-    }
-    .volume-slider::-webkit-slider-thumb {
-        width: 20px;
-        height: 20px;
-    }
+    /* Увеличиваем элементы для пальцев */
+    button, .btn-icon { min-height: 48px; min-width: 48px; }
+    input[type="text"] { font-size: 16px; padding: 12px; }
     
-    /* Карточка входа */
-    .card {
-        width: 90%; /* Чтобы не вылезала за экран */
-        padding: 1.5rem;
-    }
-    
-    /* Затемнение фона, когда открыто меню */
-    #chat-screen::after {
+    /* Затемнение фона при открытом меню */
+    .sidebar.active::before {
         content: '';
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
+        position: fixed;
+        top: 0; left: 100%; /* Начинается сразу после шторки */
+        width: 100vw; height: 100%;
         background: rgba(0,0,0,0.5);
-        z-index: 999;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s;
+        pointer-events: auto; /* Чтобы клик закрывал меню (нужна поддержка в JS, но визуально затемнит) */
     }
 }

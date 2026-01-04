@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Synapce</title>
     <link rel="icon" href="logo.png"> 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -20,7 +20,7 @@
             <p class="subtitle">Neural Mesh Messenger</p>
             
             <div class="input-group">
-                <label for="my-id-input">Твой ID</label>
+                <label for="my-id-input">Придумай свой ID</label>
                 <input type="text" id="my-id-input" placeholder="например: neo-1" autocomplete="off">
             </div>
             
@@ -84,8 +84,7 @@
                 <div class="status-log section" id="status-log"></div>
             </div>
         </aside>
-
-        <main class="chat-area">
+<main class="chat-area">
             <header class="chat-header glass-panel-light">
                 <button id="btn-toggle-sidebar" class="btn-icon mobile-only" style="margin-right: 10px;">
                     <span class="material-icons">menu</span>
@@ -98,9 +97,10 @@
             </header>
 
             <div id="messages-container" class="messages-container custom-scroll">
-                <div class="system-msg">Ожидание подключения к Synapce...</div>
+                <div class="system-msg">Ожидание подключения к сети Synapce...</div>
             </div>
-<footer class="input-area glass-panel-light">
+
+            <footer class="input-area glass-panel-light">
                 <input type="file" id="img-upload-input" accept="image/*" hidden>
                 <button id="btn-attach-img" class="btn-icon attachment-btn" disabled>
                      <span class="material-icons">image</span>
@@ -117,7 +117,7 @@
     <div id="settings-modal" class="modal hidden">
         <div class="modal-content glass-panel">
             <div class="modal-header">
-                <h2>Настройки Synapce</h2>
+                <h2>Настройки</h2>
                 <button id="btn-close-settings" class="btn-icon"><span class="material-icons">close</span></button>
             </div>
             <div class="modal-body">
@@ -133,7 +133,7 @@
                 <div class="setting-group">
                     <h3>Тема оформления</h3>
                     <select id="theme-select" class="stylish-select">
-                        <option value="theme-minimal">Synapce Blue (Minimal)</option>
+                        <option value="theme-minimal">Минимализм (Default)</option>
                         <option value="theme-aero">Frutiger Aero</option>
                         <option value="theme-metro-red">Metro Red</option>
                         <option value="theme-metro-green">Metro Green</option>
@@ -146,12 +146,7 @@
     </div>
 
     <div id="remote-audio-container" hidden></div>
-    <script src="main.js"></script>
-</body>
-</html>
-<audio id="notify-sound" src="notification.mp3" preload="auto"></audio>
-
-    <div id="remote-audio-container" hidden></div>
+    <audio id="notify-sound" src="notification.mp3" preload="auto"></audio>
     <script src="main.js"></script>
 </body>
 </html>
