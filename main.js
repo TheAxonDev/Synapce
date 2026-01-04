@@ -7,9 +7,8 @@ var mediaCalls = {}; // Активные звонки
 var peerAvatars = {}; // Аватарки
 
 // == Аудио система (Web Audio API) ==
-// Создаем аудио-контекст для управления громкостью
 var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-var peerAudioNodes = {}; // Хранилище аудио-узлов: { peerId: { source, gain, audioEl } }
+var peerAudioNodes = {}; // Хранилище аудио-узлов
 
 // Настройки по умолчанию
 var appSettings = {
@@ -43,28 +42,36 @@ var els = {
     themeSelect: document.getElementById('theme-select'),
     avatarInput: document.getElementById('avatar-input'),
     settingsAvatarPreview: document.getElementById('settings-avatar-preview'),
-    callParticipants: null 
+    callParticipants: null,
+    // Мобильные кнопки (Восстановлено)
+    btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
+    btnCloseSidebar: document.getElementById('btn-close-sidebar'),
+    sidebar: document.getElementById('sidebar')
 };
 
 // === Инициализация ===
 function init() {
     loadSettings();
-    createCallListUI(); // Создаем UI для списка звонящих
+    createCallListUI(); 
     setupEventListeners();
-    // Генерация случайного ID
     if (els.myIdInput) {
         els.myIdInput.value = 'user-' + Math.floor(Math.random() * 10000);
     }
 }
 
-// Создание зоны для отображения участников звонка
+// Создание зоны для отображения участников звонка (С ЗАЩИТОЙ ОТ ДУБЛЕЙ)
 function createCallListUI() {
+    // Исправление: Если список уже есть, не создаем его заново
+    if (document.getElementById('active-callers-list')) {
+        els.callParticipants = document.getElementById('active-callers-list');
+        return;
+    }
+
     var sidebarContent = document.querySelector('.sidebar-content');
     if (sidebarContent) {
         var div = document.createElement('div');
         div.className = 'section';
         div.innerHTML = '<h3>В звонке:</h3><div id="active-callers-list" class="hint-text">Никого</div>';
-        // Вставляем перед логом
         var logSection = document.querySelector('.status-log');
         if (logSection) {
             sidebarContent.insertBefore(div, logSection);
@@ -75,7 +82,7 @@ function createCallListUI() {
     }
 }
 
-// Обновление списка участников (Теперь с ползунками!)
+// Обновление списка участников с ползунками
 function updateCallParticipantsList() {
     if (!els.callParticipants) return;
     
@@ -87,15 +94,12 @@ function updateCallParticipantsList() {
     } else {
         els.callParticipants.innerHTML = '';
         peersInCall.forEach(function(pid) {
-            // Карточка участника
             var card = document.createElement('div');
             card.className = 'caller-card';
-
-            // Шапка (Имя)
-            var header = document.createElement('div');
+var header = document.createElement('div');
             header.className = 'caller-header';
             header.innerHTML = '<span class="material-icons caller-icon">graphic_eq</span> <span>' + pid + '</span>';
-// Управление громкостью
+
             var controls = document.createElement('div');
             controls.className = 'volume-control';
 
@@ -103,10 +107,9 @@ function updateCallParticipantsList() {
             slider.type = 'range';
             slider.className = 'volume-slider';
             slider.min = 0;
-            slider.max = 200; // 200% громкости
+            slider.max = 200;
             slider.value = 100;
             
-            // Если мы уже меняли громкость этому человеку, вернем значение
             if (peerAudioNodes[pid] && peerAudioNodes[pid].gain) {
                 slider.value = peerAudioNodes[pid].gain.gain.value * 100;
             }
@@ -115,11 +118,9 @@ function updateCallParticipantsList() {
             label.className = 'volume-label';
             label.innerText = slider.value + '%';
 
-            // Событие движения ползунка
             slider.addEventListener('input', function(e) {
                 var val = e.target.value;
                 label.innerText = val + '%';
-                // Конвертируем 0-200 в 0.0-2.0
                 setPeerVolume(pid, val / 100); 
             });
 
@@ -128,13 +129,11 @@ function updateCallParticipantsList() {
             
             card.appendChild(header);
             card.appendChild(controls);
-
             els.callParticipants.appendChild(card);
         });
     }
 }
 
-// Функция установки громкости (Web Audio API)
 function setPeerVolume(peerId, value) {
     if (peerAudioNodes[peerId] && peerAudioNodes[peerId].gain) {
         peerAudioNodes[peerId].gain.gain.value = value;
@@ -142,14 +141,11 @@ function setPeerVolume(peerId, value) {
 }
 
 function loadSettings() {
-    var savedSettings = localStorage.getItem('meshMessengerSettings');
-    if (savedSettings) {
+    var saved = localStorage.getItem('meshMessengerSettings');
+    if (saved) {
         try {
-            var parsed = JSON.parse(savedSettings);
-            appSettings = Object.assign({}, appSettings, parsed);
-        } catch (e) {
-            console.error("Error loading settings", e);
-        }
+            appSettings = Object.assign({}, appSettings, JSON.parse(saved));
+        } catch (e) {}
     }
     applyTheme(appSettings.theme);
     if (els.themeSelect) els.themeSelect.value = appSettings.theme;
@@ -165,134 +161,102 @@ function setupEventListeners() {
     if (els.btnLogin) els.btnLogin.addEventListener('click', registerAndInitPeer);
     if (els.btnConnect) els.btnConnect.addEventListener('click', connectToPeer);
     if (els.btnSend) els.btnSend.addEventListener('click', sendMessage);
-    if (els.msgInput) {
-        els.msgInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendMessage();
-        });
-    }
+    if (els.msgInput) els.msgInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') sendMessage(); });
 
-    if (els.displayMyId) {
-        els.displayMyId.addEventListener('click', function() {
-            if (myId) {
-                navigator.clipboard.writeText(myId).then(function() {
-                    log("ID скопирован", "success");
-                });
-            }
-        });
-    }
+    if (els.displayMyId) els.displayMyId.addEventListener('click', function() {
+        if (myId) navigator.clipboard.writeText(myId).then(function() { log("ID скопирован", "success"); });
+    });
 
     if (els.btnStartCall) els.btnStartCall.addEventListener('click', startMeshCall);
     if (els.btnEndCall) els.btnEndCall.addEventListener('click', endMeshCall);
 
-    if (els.btnAttachImg) els.btnAttachImg.addEventListener('click', function() {
-        els.imgUploadInput.click();
-    });
+    if (els.btnAttachImg) els.btnAttachImg.addEventListener('click', function() { els.imgUploadInput.click(); });
     if (els.imgUploadInput) els.imgUploadInput.addEventListener('change', handleImageUpload);
 
-    if (els.btnOpenSettings) els.btnOpenSettings.addEventListener('click', function() {
-        els.settingsModal.classList.remove('hidden');
-    });
-    if (els.btnCloseSettings) els.btnCloseSettings.addEventListener('click', function() {
-        els.settingsModal.classList.add('hidden');
-    });
-    if (els.themeSelect) els.themeSelect.addEventListener('change', function(e) {
-        applyTheme(e.target.value);
-    });
+    if (els.btnOpenSettings) els.btnOpenSettings.addEventListener('click', function() { els.settingsModal.classList.remove('hidden'); });
+    if (els.btnCloseSettings) els.btnCloseSettings.addEventListener('click', function() { els.settingsModal.classList.add('hidden'); });
+    if (els.themeSelect) els.themeSelect.addEventListener('change', function(e) { applyTheme(e.target.value); });
     if (els.avatarInput) els.avatarInput.addEventListener('change', handleAvatarChange);
-    // === Мобильное меню ===
-    var btnToggle = document.getElementById('btn-toggle-sidebar');
-    var btnClose = document.getElementById('btn-close-sidebar');
-    var sidebar = document.querySelector('.sidebar');
 
-    if (btnToggle && sidebar) {
-        btnToggle.addEventListener('click', function() {
-            sidebar.classList.add('active');
+    // === МОБИЛЬНОЕ МЕНЮ (Восстановлено!) ===
+    if (els.btnToggleSidebar && els.sidebar) {
+        els.btnToggleSidebar.addEventListener('click', function() {
+            els.sidebar.classList.add('active');
         });
     }
 
-    if (btnClose && sidebar) {
-        btnClose.addEventListener('click', function() {
-            sidebar.classList.remove('active');
+    if (els.btnCloseSidebar && els.sidebar) {
+        els.btnCloseSidebar.addEventListener('click', function() {
+            els.sidebar.classList.remove('active');
         });
     }
-
-    // Закрывать меню, если кликнули по чату (удобно)
+// Закрывать меню при клике на чат
     var chatArea = document.querySelector('.chat-area');
-    if (chatArea && sidebar) {
+    if (chatArea && els.sidebar) {
         chatArea.addEventListener('click', function() {
-            // Если меню открыто, клик по чату закроет его
-            if (sidebar.classList.contains('active')) {
-                sidebar.classList.remove('active');
+            if (els.sidebar.classList.contains('active')) {
+                els.sidebar.classList.remove('active');
             }
         });
     }
-
 }
 
-function applyTheme(themeName) {
-    document.body.className = ''; // Сброс классов
-    document.body.classList.add(themeName);
-    appSettings.theme = themeName;
+function applyTheme(name) {
+    document.body.className = '';
+    document.body.classList.add(name);
+    appSettings.theme = name;
     saveSettings();
 }
-// === Логика Аватарок ===
+
 function handleAvatarChange(e) {
     var file = e.target.files[0];
     if (!file || !file.type.startsWith('image/')) return;
-
     var reader = new FileReader();
-    reader.onload = function(event) {
-        var base64Res = event.target.result;
-        if (base64Res.length > 200000) {
-            alert("Файл слишком большой.");
-            return;
-        }
-        appSettings.avatar = base64Res;
-        els.myAvatarDisplay.src = base64Res;
-        els.settingsAvatarPreview.src = base64Res;
+    reader.onload = function(evt) {
+        var res = evt.target.result;
+        if (res.length > 200000) { alert("Файл слишком большой."); return; }
+        appSettings.avatar = res;
+        els.myAvatarDisplay.src = res;
+        els.settingsAvatarPreview.src = res;
         saveSettings();
-        log("Аватар обновлен", "success");
         broadcastMyAvatar();
     };
     reader.readAsDataURL(file);
 }
 
 function broadcastMyAvatar() {
-    Object.values(connections).forEach(function(conn) {
-        if (conn && conn.open) {
-            conn.send({
-                type: 'avatar-update',
-                from: myId,
-                data: appSettings.avatar
-            });
-        }
+    Object.values(connections).forEach(function(c) {
+        if (c.open) c.send({type: 'avatar-update', from: myId, data: appSettings.avatar});
     });
 }
 
-// === P2P Logic (Твой оригинальный код) ===
+// === P2P Logic ===
 function registerAndInitPeer() {
-    var inputId = els.myIdInput.value.trim();
-    if (!inputId) {
-        log("Введите ID!", "error");
-        return;
-    }
+    var id = els.myIdInput.value.trim();
+    if (!id) return log("Введите ID!", "error");
 
     els.btnLogin.disabled = true;
     els.btnLogin.innerText = 'Подключение...';
-    
-    peer = new Peer(inputId, {
+
+    // Настройки для GitHub Pages + РФ
+    var ice = [
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+    ];
+
+    peer = new Peer(id, {
+        host: '0.peerjs.com',
+        port: 443,
+        path: '/',
+        secure: true,
         debug: 1,
-        config: {
-            'iceServers': [
-                { url: 'stun:stun1.l.google.com:19302' },
-                { url: 'stun:stun2.l.google.com:19302' }
-            ]
-        }
+        config: { iceServers: ice, sdpSemantics: 'unified-plan' },
+        pingInterval: 5000
     });
 
-    peer.on('open', function(id) {
-        myId = id;
-        log('Ваш ID: ' + myId, "success");
+    peer.on('open', function(pid) {
+        myId = pid;
+        log('Успех! ID: ' + myId, "success");
         els.displayMyId.innerText = myId;
         els.loginScreen.classList.add('hidden');
         els.chatScreen.classList.remove('hidden');
@@ -300,14 +264,19 @@ function registerAndInitPeer() {
 
     peer.on('error', function(err) {
         console.error(err);
-        log("Ошибка P2P: " + err.type, "error");
+        var msg = "Ошибка: " + err.type;
+        if (err.type === 'unavailable-id') msg = "ID уже занят.";
+        if (err.type === 'peer-unavailable') msg = "Пользователь не найден.";
+        if (err.type === 'network') msg = "Ошибка сети (или VPN).";
+        
+        log(msg, "error");
         els.btnLogin.disabled = false;
-        els.btnLogin.innerText = 'Создать узел';
+        els.btnLogin.innerText = 'Попробовать снова';
     });
 
-    peer.on('connection', function(conn) {
-        log('Входящее от: ' + conn.peer);
-        setupConnectionHandlers(conn);
+    peer.on('connection', function(c) {
+        log('Входящее от: ' + c.peer);
+        setupConnectionHandlers(c);
     });
 
     peer.on('call', function(call) {
@@ -316,19 +285,17 @@ function registerAndInitPeer() {
             call.answer(myStream);
             setupMediaCallHandlers(call);
         } else {
-            log('Пропущен звонок от ' + call.peer + ' (начните звонок, чтобы ответить)', 'error');
-            call.close();
+            log('Пропущен звонок от ' + call.peer + ' (начните звонок, чтобы ответить)', 'info');
+            // Опционально: можно тут же вызвать playNotification()
         }
     });
 }
 
 function connectToPeer() {
-    var remoteId = els.remoteIdInput.value.trim();
-    if (!remoteId || remoteId === myId) return;
-
-    log('Подключение к: ' + remoteId);
-    var conn = peer.connect(remoteId);
-    setupConnectionHandlers(conn);
+    var rid = els.remoteIdInput.value.trim();
+    if (!rid || rid === myId) return;
+    log('Подключение к: ' + rid);
+    setupConnectionHandlers(peer.connect(rid));
 }
 
 function setupConnectionHandlers(conn) {
@@ -336,86 +303,59 @@ function setupConnectionHandlers(conn) {
         if (connections[conn.peer]) return;
         connections[conn.peer] = conn;
         updateConnectionCount();
-        log('Подключено к ' + conn.peer, "success");
+        log('Подключено: ' + conn.peer, "success");
         updateChatUIState(true);
-        conn.send({
-            type: 'avatar-update',
-            from: myId,
-            data: appSettings.avatar
-        });
+        conn.send({type: 'avatar-update', from: myId, data: appSettings.avatar});
     });
-
-    conn.on('data', function(data) {
-        handleIncomingData(data);
-    });
-
-    conn.on('close', function() {
-        handlePeerDisconnect(conn.peer);
-    });
-
-    conn.on('error', function(err) {
-        handlePeerDisconnect(conn.peer);
-    });
+    conn.on('data', handleIncomingData);
+    conn.on('close', function() { handlePeerDisconnect(conn.peer); });
+    conn.on('error', function() { handlePeerDisconnect(conn.peer); });
 }
 
-function handlePeerDisconnect(peerId) {
-    if (connections[peerId]) {
-        log('Отключен: ' + peerId, "error");
-        delete connections[peerId];
+function handlePeerDisconnect(pid) {
+if (connections[pid]) {
+        log('Отключен: ' + pid, "error");
+        delete connections[pid];
     }
-    
-    // Если этот пир был в звонке - удаляем аудио
-    if (mediaCalls[peerId]) {
-        mediaCalls[peerId].close();
-        cleanupPeerAudio(peerId);
-        delete mediaCalls[peerId];
+    if (mediaCalls[pid]) {
+        mediaCalls[pid].close();
+        cleanupPeerAudio(pid);
+        delete mediaCalls[pid];
     }
-    
     updateConnectionCount();
     updateCallParticipantsList();
-    
     if (Object.keys(connections).length === 0) {
         updateChatUIState(false);
         if (myStream) endMeshCall();
     }
 }
-// === Новая функция для проигрывания звука ===
+
+// ЗВУК УВЕДОМЛЕНИЙ
 function playNotification() {
     var audio = document.getElementById('notify-sound');
     if (audio) {
-        // Сбрасываем время, чтобы звук играл с начала, если сообщения приходят часто
         audio.currentTime = 0; 
-        // Запускаем
-        audio.play().catch(function(e) {
-            console.log("Автовоспроизведение заблокировано браузером (нужен клик по странице):", e);
-        });
+        audio.play().catch(function(e){});
     }
 }
 
-// === Обновленная функция обработки данных ===
 function handleIncomingData(data) {
-    // Флаг: нужно ли уведомление? (По умолчанию false)
     var needNotify = false;
-
+    
     if (data.type === 'chat') {
         addMessageToUI(data.from, data.text, 'in');
-        needNotify = true; // Пришло сообщение
+        needNotify = true;
     } else if (data.type === 'image') {
         addImageToUI(data.from, data.data, 'in');
-        needNotify = true; // Пришла картинка
+        needNotify = true;
     } else if (data.type === 'avatar-update') {
         peerAvatars[data.from] = data.data;
     }
 
-    // Если пришло сообщение И вкладка сейчас скрыта (свернута или фоновая)
     if (needNotify && document.hidden) {
         playNotification();
-        
-        // Дополнительный бонус: мигание заголовка вкладки
         var oldTitle = document.title;
         document.title = "📩 Новое сообщение!";
-        
-        // Возвращаем заголовок, когда пользователь вернется на вкладку
         var onFocus = function() {
             document.title = oldTitle;
             window.removeEventListener('focus', onFocus);
@@ -425,15 +365,10 @@ function handleIncomingData(data) {
 }
 
 function sendMessage() {
-    var text = els.msgInput.value.trim();
-    if (!text) return;
-
-    broadcastData({
-        type: 'chat',
-        from: myId,
-        text: text
-    });
-    addMessageToUI('Вы', text, 'out');
+    var txt = els.msgInput.value.trim();
+    if (!txt) return;
+    broadcastData({type: 'chat', from: myId, text: txt});
+    addMessageToUI('Вы', txt, 'out');
     els.msgInput.value = '';
 }
 
@@ -441,50 +376,39 @@ function handleImageUpload(e) {
     var file = e.target.files[0];
     if (!file) return;
     els.imgUploadInput.value = '';
-
     var reader = new FileReader();
-    reader.onload = function(event) {
-        var base64Data = event.target.result;
-        // Лимит 500KB
-        if (base64Data.length > 500000) return;
-        
-        broadcastData({
-            type: 'image',
-            from: myId,
-            data: base64Data
-        });
-        addImageToUI('Вы', base64Data, 'out');
+    reader.onload = function(evt) {
+        var d = evt.target.result;
+        if (d.length > 500000) return; 
+        broadcastData({type: 'image', from: myId, data: d});
+        addImageToUI('Вы', d, 'out');
     };
     reader.readAsDataURL(file);
 }
 
-function broadcastData(dataObj) {
-    Object.values(connections).forEach(function(conn) {
-        if (conn && conn.open) conn.send(dataObj);
-    });
+function broadcastData(d) {
+    Object.values(connections).forEach(function(c) { if (c.open) c.send(d); });
 }
 
-// === Звонки (С интеграцией Web Audio API) ===
+// === ЗВОНКИ ===
+
 function startMeshCall() {
-    // Разблокируем аудио-контекст (нужно для Chrome)
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
     navigator.mediaDevices.getUserMedia({ audio: true, video: false })
         .then(function(stream) {
             myStream = stream;
-            log("Микрофон включен", "success");
+            log("Микрофон активен", "success");
             els.btnStartCall.classList.add('hidden');
             els.btnEndCall.classList.remove('hidden');
 
-            Object.keys(connections).forEach(function(peerId) {
-                var call = peer.call(peerId, myStream);
+            Object.keys(connections).forEach(function(pid) {
+                var call = peer.call(pid, myStream);
                 setupMediaCallHandlers(call);
             });
             updateCallParticipantsList();
         })
-        .catch(function(err) {
-            log("Ошибка микрофона: " + err, "error");
-        });
+        .catch(function(e) { log("Ошибка микрофона: " + e, "error"); });
 }
 
 function endMeshCall() {
@@ -492,11 +416,10 @@ function endMeshCall() {
         myStream.getTracks().forEach(function(t) { t.stop(); });
         myStream = null;
     }
-    Object.values(mediaCalls).forEach(function(call) { call.close(); });
-    // Чистим аудио узлы
+    Object.values(mediaCalls).forEach(function(c) { c.close(); });
     Object.keys(peerAudioNodes).forEach(cleanupPeerAudio);
     
-    mediaCalls = {}; 
+    mediaCalls = {};
     els.remoteAudioContainer.innerHTML = '';
     els.btnStartCall.classList.remove('hidden');
     els.btnEndCall.classList.add('hidden');
@@ -509,32 +432,23 @@ function setupMediaCallHandlers(call) {
     updateCallParticipantsList();
 
     call.on('stream', function(remoteStream) {
-        // Создаем скрытый элемент для потока
         var audioEl = document.createElement('audio');
         audioEl.srcObject = remoteStream;
         audioEl.autoplay = true;
-        // Глушим сам элемент, так как звук пойдет через усилитель (GainNode)
         audioEl.muted = true; 
         els.remoteAudioContainer.appendChild(audioEl);
-
-        // --- Подключаем Web Audio API ---
-        // 1. Берем звук из потока
+        
         var source = audioCtx.createMediaStreamSource(remoteStream);
-        // 2. Создаем усилитель
         var gainNode = audioCtx.createGain();
-        gainNode.gain.value = 1.0; // По умолчанию 100%
-        // 3. Соединяем: Поток -> Усилитель -> Колонки
+        gainNode.gain.value = 1.0; 
         source.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-
-        // Сохраняем ссылки для управления
-        peerAudioNodes[pid] = {
+peerAudioNodes[pid] = {
             source: source,
             gain: gainNode,
             audioEl: audioEl
         };
         
-        // Обновляем список, чтобы ползунок заработал
         updateCallParticipantsList();
     });
 
@@ -544,6 +458,7 @@ function setupMediaCallHandlers(call) {
         updateCallParticipantsList();
     });
 }
+
 function cleanupPeerAudio(pid) {
     if (peerAudioNodes[pid]) {
         var nodes = peerAudioNodes[pid];
@@ -554,14 +469,13 @@ function cleanupPeerAudio(pid) {
     }
 }
 
-// === UI Helpers ===
+// === UI ===
 function updateChatUIState(isActive) {
     var count = Object.keys(connections).length;
     els.msgInput.disabled = count === 0;
     els.btnSend.disabled = count === 0;
     els.btnAttachImg.disabled = count === 0;
     els.btnStartCall.disabled = count === 0;
-    
     if (isActive && count > 0) els.msgInput.focus();
 }
 
@@ -579,71 +493,50 @@ function getAvatarFor(id) {
 function createMsgRow(author, type) {
     var row = document.createElement('div');
     row.className = 'msg-row ' + type;
-    
     var img = document.createElement('img');
     img.src = getAvatarFor(author);
     img.className = 'msg-avatar';
-    
     var bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
-    
     var meta = document.createElement('div');
     meta.className = 'msg-meta';
     meta.innerText = author;
     bubble.appendChild(meta);
-    
-    if (type === 'in') {
-        row.appendChild(img);
-        row.appendChild(bubble);
-    } else {
-        row.appendChild(bubble);
-        row.appendChild(img);
-    }
-    return { row: row, content: bubble };
+    if (type === 'in') { row.appendChild(img); row.appendChild(bubble); }
+    else { row.appendChild(bubble); row.appendChild(img); }
+    return {row: row, content: bubble};
 }
 
 function addMessageToUI(author, text, type) {
-    var obj = createMsgRow(author, type);
+    var o = createMsgRow(author, type);
     var d = document.createElement('div');
     d.innerText = text;
-    obj.content.appendChild(d);
-    appendToChat(obj.row);
+    o.content.appendChild(d);
+    appendToChat(o.row);
 }
 
 function addImageToUI(author, base64, type) {
-    var obj = createMsgRow(author, type);
+    var o = createMsgRow(author, type);
     var img = document.createElement('img');
     img.src = base64;
     img.className = 'msg-image';
     img.onclick = function() {
         var w = window.open("");
-        if (w) {
-             var i = w.document.createElement('img');
-             i.src = base64;
-             i.style.maxWidth = '100%';
-             w.document.body.appendChild(i);
-        }
+        if(w) { var i=w.document.createElement('img'); i.src=base64; i.style.maxWidth='100%'; w.document.body.appendChild(i); }
     };
-    obj.content.appendChild(img);
-    appendToChat(obj.row);
+    o.content.appendChild(img);
+    appendToChat(o.row);
 }
 
 function appendToChat(el) {
-    if (els.msgContainer) {
-        els.msgContainer.appendChild(el);
-        els.msgContainer.scrollTop = els.msgContainer.scrollHeight;
-    }
+    if (els.msgContainer) { els.msgContainer.appendChild(el); els.msgContainer.scrollTop = els.msgContainer.scrollHeight; }
 }
 
 function log(text, type) {
     var div = document.createElement('div');
     div.className = 'log-item ' + (type || 'info');
     div.innerText = text;
-    if (els.statusLog) {
-        els.statusLog.appendChild(div);
-        els.statusLog.scrollTop = els.statusLog.scrollHeight;
-    }
+    if (els.statusLog) { els.statusLog.appendChild(div); els.statusLog.scrollTop = els.statusLog.scrollHeight; }
 }
 
-// Запуск
 document.addEventListener('DOMContentLoaded', init);
