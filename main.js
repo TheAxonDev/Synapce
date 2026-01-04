@@ -190,14 +190,25 @@ function setupEventListeners() {
             els.sidebar.classList.remove('active');
         });
     }
-// Закрывать меню при клике на чат
-    var chatArea = document.querySelector('.chat-area');
-    if (chatArea && els.sidebar) {
-        chatArea.addEventListener('click', function() {
-            if (els.sidebar.classList.contains('active')) {
-                els.sidebar.classList.remove('active');
+// ... внутри setupEventListeners ...
+
+    // === ПРОСТОЕ ПЕРЕКЛЮЧЕНИЕ МЕНЮ ===
+    // Кнопка "Три полоски" в чате
+    if (els.btnToggleSidebar) {
+        els.btnToggleSidebar.onclick = function() {
+            if (els.sidebar) {
+                els.sidebar.classList.add('active'); // Показать меню
             }
-        });
+        };
+    }
+
+    // Кнопка "Назад" (стрелочка) внутри меню
+    if (els.btnCloseSidebar) {
+        els.btnCloseSidebar.onclick = function() {
+            if (els.sidebar) {
+                els.sidebar.classList.remove('active'); // Скрыть меню
+            }
+        };
     }
 }
 

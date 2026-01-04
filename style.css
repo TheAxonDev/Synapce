@@ -353,78 +353,74 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     width: 35px;
     text-align: right;
 }
-/* === МОБИЛЬНАЯ ОПТИМИЗАЦИЯ === */
-
+/* === МОБИЛЬНАЯ ВЕРСИЯ (РЕЖИМ ПЕРЕКЛЮЧЕНИЯ ЭКРАНОВ) === */
 
 .mobile-only {
-    display: none;
+    display: none; /* На ПК кнопки меню скрыты */
 }
 
 @media (max-width: 768px) {
-    /* 1. Отключаем лишние украшательства */
-    body::before { display: none !important; }
-    body { background: var(--bg-main) !important; height: 100dvh; width: 100vw; overflow: hidden; } /* 100dvh - это важно для телефонов! */
+    /* 1. Базовые настройки для телефона */
+    body {
+        background: var(--bg-main) !important;
+        height: 100dvh; /* Высота на весь экран */
+        overflow: hidden;
+    }
+    body::before { display: none !important; } /* Убираем фон */
     
     .glass-panel, .glass-panel-light {
         backdrop-filter: none !important;
         background: var(--bg-secondary);
-        box-shadow: none;
         border: none;
         border-radius: 0;
     }
 
-    /* 2. Кнопки */
-    .mobile-only { display: flex; align-items: center; justify-content: center; }
-
-    /* 3. Шторка (Sidebar) */
-    .sidebar {
-        position: fixed; /* Фиксируем намертво */
-        top: 0; left: 0;
-        width: 85%;
-        height: 100%;
-        z-index: 2000; /* Очень высокий индекс, чтобы быть поверх всего */
-        background: var(--bg-secondary);
-        border-right: 1px solid var(--border-color);
-        transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
-        display: flex; /* Возвращаем флекс, если он был убран */
+    /* 2. Показываем мобильные кнопки */
+    .mobile-only {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    .sidebar.active { transform: translateX(0); box-shadow: 10px 0 50px rgba(0,0,0,0.5); }
 
-    /* 4. Чат и Поле ввода */
+    /* 3. САЙДБАР (МЕНЮ) - Изначально скрыт */
+    .sidebar {
+        display: none; /* СКРЫТО ПО УМОЛЧАНИЮ */
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 9999; /* Поверх всего */
+        background: var(--bg-main);
+        flex-direction: column;
+    }
+
+    /* 4. САЙДБАР АКТИВЕН (Когда нажали меню) */
+    .sidebar.active {
+        display: flex !important; /* ПОКАЗЫВАЕМ */
+    }
+
+    /* 5. ЧАТ (На весь экран) */
     .chat-area {
         width: 100%;
-        height: 100dvh; /* Высота экрана с учетом адресной строки */
+        height: 100dvh;
         display: flex;
         flex-direction: column;
     }
 
-    .messages-container {
-        flex: 1; /* Занимает всё свободное место */
-        overflow-y: auto;
-        padding-bottom: 10px;
-    }
-
+    /* Поле ввода сообщения */
     .input-area {
-        flex-shrink: 0; /* Запрещаем сжимать поле ввода */
+        flex-shrink: 0;
         padding: 10px;
-        background: var(--bg-tertiary); /* Чтобы визуально отделить */
-        position: relative;
-        z-index: 10;
-        padding-bottom: env(safe-area-inset-bottom); /* Отступ для iPhone без кнопки */
+        background: var(--bg-tertiary);
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+    
+    .messages-container {
+        flex: 1;
+        padding-bottom: 60px; /* Отступ чтобы сообщения не прилипали к вводу */
     }
 
-    /* Увеличиваем элементы для пальцев */
+    /* Кнопки покрупнее */
     button, .btn-icon { min-height: 48px; min-width: 48px; }
     input[type="text"] { font-size: 16px; padding: 12px; }
-    
-    /* Затемнение фона при открытом меню */
-    .sidebar.active::before {
-        content: '';
-        position: fixed;
-        top: 0; left: 100%; /* Начинается сразу после шторки */
-        width: 100vw; height: 100%;
-        background: rgba(0,0,0,0.5);
-        pointer-events: auto; /* Чтобы клик закрывал меню (нужна поддержка в JS, но визуально затемнит) */
-    }
 }
