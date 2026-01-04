@@ -33,16 +33,24 @@
 
     <div id="chat-screen" class="screen hidden">
         
-        <aside class="sidebar glass-panel">
+        <aside class="sidebar glass-panel" id="sidebar">
             <div class="sidebar-header">
                 <div class="brand">
                     <img src="logo.png" alt="S" class="app-logo-small">
                     <span>Synapce</span>
                 </div>
-                <button id="btn-open-settings" class="btn-icon" title="Настройки"><span class="material-icons">settings</span></button>
+                
+                <div class="sidebar-tools" style="display: flex; gap: 5px;">
+                    <button id="btn-open-settings" class="btn-icon" title="Настройки">
+                        <span class="material-icons">settings</span>
+                    </button>
+                    <button id="btn-close-sidebar" class="btn-icon mobile-only">
+                        <span class="material-icons">chevron_left</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="my-profile-section">
+            <div class="my-profile-section" style="padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;">
                 <div class="my-avatar-container">
                     <img id="my-avatar-display" src="default-avatar.png" alt="Me" class="avatar">
                 </div>
@@ -62,7 +70,7 @@
                 </div>
 
                 <div class="call-box section">
-                     <h3>Голосовая связь</h3>
+                     <h3>Связь</h3>
                      <div class="call-controls">
                          <button id="btn-start-call" class="btn-call green">
                              <span class="material-icons">call</span> Start
@@ -79,6 +87,10 @@
 
         <main class="chat-area">
             <header class="chat-header glass-panel-light">
+                <button id="btn-toggle-sidebar" class="btn-icon mobile-only" style="margin-right: 10px;">
+                    <span class="material-icons">menu</span>
+                </button>
+
                 <div class="header-info">
                     <h3>Общий канал</h3>
                     <span id="connection-count" class="badge">0 peers</span>
@@ -132,6 +144,12 @@
             </div>
         </div>
     </div>
+
+    <div id="remote-audio-container" hidden></div>
+    <script src="main.js"></script>
+</body>
+</html>
+<audio id="notify-sound" src="notification.mp3" preload="auto"></audio>
 
     <div id="remote-audio-container" hidden></div>
     <script src="main.js"></script>

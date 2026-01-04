@@ -1,122 +1,143 @@
-/* --- Базовые настройки и переменные (Minimal Theme по умолчанию) --- */
+/* --- Базовые настройки и переменные --- */
 :root {
-    /* Цветовая палитра (Minimal) */
+    /* Дефолтные переменные (Minimal Theme) */
     --bg-main: #202225;
-    --bg-secondary: #2f3136;
-    --bg-tertiary: #36393f;
+    --bg-image: none; /* У минимализма нет картинки */
+    --bg-blur: 0px;   /* И нет размытия фона */
+    
+    --glass-bg: #2f3136; /* Сплошной цвет для минимализма */
+    --glass-border: 1px solid #40444b;
+    --glass-blur: 0px;   /* Нет размытия панели */
+    
     --primary-color: #5865f2;
-    --primary-hover: #4752c4;
-    --accent-color: #5865f2;
     --text-main: #ffffff;
     --text-muted: #b9bbbe;
     --border-color: #40444b;
-    
-    /* Эффекты */
-    --glass-bg: var(--bg-secondary);
-    --glass-border: 1px solid var(--border-color);
-    --box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     --panel-radius: 8px;
     --btn-radius: 4px;
+    --box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     
-    /* Шрифты */
     --font-stack: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-/* --- THEME: Frutiger Aero (Стеклянный, Глянцевый) --- */
+/* --- THEME: Frutiger Aero (Светлое стекло) --- */
 .theme-aero {
-    --bg-main: linear-gradient(135deg, #a8c0ff, #3f2b96); /* Небо и космос */
-    --bg-secondary: rgba(255, 255, 255, 0.7); /* Полупрозрачное белое стекло */
-    --bg-tertiary: rgba(240, 248, 255, 0.8);
-    --primary-color: #00aeff; /* Яркий голубой */
-    --primary-hover: #008cff;
-    --accent-color: #42e332; /* Яркий зеленый для акцентов */
-    --text-main: #000000;
-    --text-muted: #333333;
-    --border-color: #ffffff;
+    --bg-image: url('bg-aero.jpg');
+    --bg-blur: 5px; /* Размытие самого фона */
     
-    --glass-bg: linear-gradient(to bottom, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%);
-    --glass-border: 2px solid rgba(255, 255, 255, 0.8);
-    --box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37), inset 0 1px 1px rgba(255,255,255,0.9);
+    --glass-bg: rgba(255, 255, 255, 0.65); /* Полупрозрачный белый */
+    --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+    --glass-blur: 15px; /* Сильное размытие под панелью */
+    
+    --primary-color: #00aeff;
+    --primary-hover: #008cff;
+    --text-main: #000000; /* Темный текст на светлом фоне */
+    --text-muted: #444444;
+    --border-color: #ffffff;
     --panel-radius: 16px;
     --btn-radius: 20px;
+    --box-shadow: 0 8px 32px rgba(31, 38, 135, 0.25);
 }
 
-/* --- THEME: Frutiger Metro (Плоский, Плиточный) --- */
-/* Общая база для Metro */
+/* --- THEME: Metro (Плоский стиль + Темное стекло) --- */
+/* Общие настройки для Metro */
 [class*="theme-metro-"] {
-    --bg-main: #111111; /* Глубокий черный фон */
-    --bg-secondary: #1f1f1f; /* Темные плитки */
-    --bg-tertiary: #2d2d2d;
+    --bg-blur: 3px;
+    --glass-bg: rgba(20, 20, 20, 0.85); /* Темное стекло */
+    --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+    --glass-blur: 10px;
+    
     --text-main: #ffffff;
     --text-muted: #aaaaaa;
-    --border-color: transparent;
-    --glass-bg: var(--bg-secondary);
-    --glass-border: none;
-    --box-shadow: none;
-    --panel-radius: 0px; /* Строгие углы */
+    --panel-radius: 0px;
     --btn-radius: 0px;
-    font-family: 'Segoe UI Light', sans-serif; /* Более тонкий шрифт */
+    --box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    font-family: 'Segoe UI Light', sans-serif;
 }
-/* Цветовые вариации Metro */
-.theme-metro-red { --primary-color: #e81123; --primary-hover: #c50f1e; --accent-color: #e81123; }
-.theme-metro-green { --primary-color: #107c10; --primary-hover: #0c5d0c; --accent-color: #107c10; }
-.theme-metro-purple { --primary-color: #881798; --primary-hover: #6b1278; --accent-color: #881798; }
+.theme-metro-red { 
+    --bg-image: url('bg-metro-red.jpg');
+    --primary-color: #e81123; 
+}
+.theme-metro-green { 
+    --bg-image: url('bg-metro-green.jpg');
+    --primary-color: #107c10; 
+}
+.theme-metro-purple { 
+    --bg-image: url('bg-metro-purple.jpg');
+    --primary-color: #881798; 
+}
 
 /* --- THEME: Liquid Glass (Футуристичный) --- */
 .theme-liquid {
-    --bg-main: linear-gradient(45deg, #141e30, #243b55); /* Темный градиент */
-    --bg-secondary: rgba(255, 255, 255, 0.1); /* Сильное размытие */
-    --bg-tertiary: rgba(255, 255, 255, 0.05);
-    --primary-color: #00fff2; /* Неоновый циан */
-    --primary-hover: #00d4c8;
-    --accent-color: #ff00d4; /* Неоновая маджента */
+    --bg-image: url('bg-liquid.jpg');
+    --bg-blur: 8px;
+    
+    --glass-bg: rgba(255, 255, 255, 0.1); /* Очень прозрачное */
+    --glass-border: 1px solid rgba(255, 255, 255, 0.2);
+    --glass-blur: 20px; /* Эффект "замороженного" стекла */
+    
+    --primary-color: #00fff2;
     --text-main: #ffffff;
-    --text-muted: rgba(255, 255, 255, 0.6);
-    --border-color: rgba(255, 255, 255, 0.2);
-
-    --glass-bg: rgba( 255, 255, 255, 0.1 );
-    --glass-border: 1px solid rgba( 255, 255, 255, 0.18 );
-    --box-shadow: 0 8px 32px 0 rgba( 0, 0, 0, 0.5 );
+    --text-muted: rgba(255, 255, 255, 0.7);
     --panel-radius: 24px;
     --btn-radius: 12px;
-    /* Специфическое свойство для Liquid темы */
-    --backdrop-filter: blur( 10px );
+    --box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
 /* === Общий сброс и структура === */
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-    background: var(--bg-main);
+    background-color: var(--bg-main); /* Резервный цвет */
     color: var(--text-main);
     font-family: var(--font-stack);
     height: 100vh;
     overflow: hidden;
-    transition: background 0.3s ease, color 0.3s ease;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+/* Псевдо-элемент для фоновой картинки с размытием */
+body::before {
+    content: "";
+    position: absolute;
+    top: -10px; left: -10px; 
+    width: calc(100% + 20px); height: calc(100% + 20px); /* Чуть больше экрана, чтобы размытие краев не было видно */
+    z-index: -1;
+    
+    background-image: var(--bg-image);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    
+    filter: blur(var(--bg-blur)); /* Вот тут применяется размытие фона */
+    transition: background-image 0.5s ease, filter 0.5s ease;
 }
 
 /* Утилиты */
 .hidden { display: none !important; }
 .screen { width: 100%; height: 100%; display: flex; }
+
+/* === Эффект Стекла (Glass Panel) === */
 .glass-panel {
     background: var(--glass-bg);
     border: var(--glass-border);
     box-shadow: var(--box-shadow);
     border-radius: var(--panel-radius);
-    backdrop-filter: var(--backdrop-filter, none); /* Применяется только если определено в теме */
+    
+    /* Магия блюра для панели */
+    backdrop-filter: blur(var(--glass-blur)); 
+    -webkit-backdrop-filter: blur(var(--glass-blur)); /* Для Safari */
+    
+    transition: background 0.3s ease, border 0.3s ease, backdrop-filter 0.3s ease;
 }
 .glass-panel-light {
-     background: var(--bg-tertiary);
-     /* Для Aero и Liquid делаем чуть прозрачнее */
-     .theme-aero &, .theme-liquid & {
-         background: rgba(255,255,255, 0.2);
+     background: rgba(0, 0, 0, 0.2);
+     /* В светлых темах делаем чуть светлее */
+     .theme-aero & {
+         background: rgba(255, 255, 255, 0.3);
      }
 }
-.flex-row { display: flex; gap: 10px; align-items: center; }
-.hint-text { font-size: 0.8rem; color: var(--text-muted); }
-.section { margin-bottom: 1.5rem; }
-h2, h3 { margin-bottom: 0.5rem; font-weight: 600; }
-
-
 /* === Элементы управления (Кнопки, Инпуты) === */
 input[type="text"], select.stylish-select {
     width: 100%; padding: 12px;
@@ -271,4 +292,166 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     width: 32px;   /* Размер лого в меню */
     height: 32px;
     object-fit: contain;
+}
+/* === Стили для списка участников и громкости === */
+#active-callers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.caller-card {
+    background: rgba(0,0,0,0.2);
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.caller-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    font-weight: bold;
+}
+
+.caller-icon {
+    color: #3ba55c;
+    font-size: 16px;
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.volume-slider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--bg-tertiary);
+    border-radius: 2px;
+    outline: none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.volume-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    width: 35px;
+    text-align: right;
+}
+/* === МОБИЛЬНАЯ ОПТИМИЗАЦИЯ === */
+
+/* Скрываем мобильные кнопки на ПК */
+.mobile-only {
+    display: none;
+}
+
+/* Настройки для экранов шириной до 768px (планшеты и телефоны) */
+@media (max-width: 768px) {
+    
+    /* 1. Отключаем фоны и блюр (По требованию) */
+    body::before {
+        display: none !important; /* Убираем картинку */
+    }
+    body {
+        background: var(--bg-main) !important; /* Простой плоский цвет */
+    }
+    .glass-panel, .glass-panel-light {
+        backdrop-filter: none !important; /* Убираем нагружающий блюр */
+        background: var(--bg-secondary); /* Непрозрачный фон */
+        box-shadow: none;
+        border-radius: 0; /* Убираем скругления, чтобы занимать весь экран */
+        border: none;
+    }
+
+    /* 2. Показываем мобильные кнопки */
+    .mobile-only {
+        display: flex;
+    }
+
+    /* 3. Переделываем Layout (Сетка) */
+    #chat-screen {
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Боковая панель (Шторка) */
+    .sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 85%; /* Шторка не на весь экран, чтобы видеть, что сзади чат */
+        height: 100%;
+        z-index: 1000;
+        background: var(--bg-secondary);
+        border-right: 1px solid var(--border-color);
+        
+        /* Анимация выезда */
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    /* Класс, который JS будет добавлять для открытия меню */
+    .sidebar.active {
+        transform: translateX(0);
+        box-shadow: 10px 0 50px rgba(0,0,0,0.5);
+    }
+
+    /* Чат на весь экран */
+    .chat-area {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* 4. Улучшение UX для пальцев */
+    button, .btn-icon, .btn-primary {
+        min-height: 44px; /* Стандарт Apple для тач-интерфейсов */
+        min-width: 44px;
+    }
+
+    input[type="text"] {
+        font-size: 16px; /* Чтобы iOS не зумил экран при вводе */
+        padding: 12px;
+    }
+
+    /* Увеличиваем ползунок громкости */
+    .volume-slider {
+        height: 8px;
+    }
+    .volume-slider::-webkit-slider-thumb {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Карточка входа */
+    .card {
+        width: 90%; /* Чтобы не вылезала за экран */
+        padding: 1.5rem;
+    }
+    
+    /* Затемнение фона, когда открыто меню */
+    #chat-screen::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
 }

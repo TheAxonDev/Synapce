@@ -4,7 +4,12 @@ var myId = null;
 var myStream = null; // Локальный аудиопоток
 var connections = {}; // Активные P2P соединения
 var mediaCalls = {}; // Активные звонки
-var peerAvatars = {}; // Аватарки: { peerId: base64Data }
+var peerAvatars = {}; // Аватарки
+
+// == Аудио система (Web Audio API) ==
+// Создаем аудио-контекст для управления громкостью
+var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+var peerAudioNodes = {}; // Хранилище аудио-узлов: { peerId: { source, gain, audioEl } }
 
 // Настройки по умолчанию
 var appSettings = {
@@ -38,7 +43,6 @@ var els = {
     themeSelect: document.getElementById('theme-select'),
     avatarInput: document.getElementById('avatar-input'),
     settingsAvatarPreview: document.getElementById('settings-avatar-preview'),
-    // Динамический контейнер для списка участников звонка
     callParticipants: null 
 };
 
@@ -71,6 +75,7 @@ function createCallListUI() {
     }
 }
 
+// Обновление списка участников (Теперь с ползунками!)
 function updateCallParticipantsList() {
     if (!els.callParticipants) return;
     
@@ -82,26 +87,57 @@ function updateCallParticipantsList() {
     } else {
         els.callParticipants.innerHTML = '';
         peersInCall.forEach(function(pid) {
-            var p = document.createElement('div');
-            p.style.display = 'flex';
-            p.style.alignItems = 'center';
-            p.style.gap = '5px';
-            p.style.marginTop = '5px';
-            p.style.color = '#3ba55c'; // Зеленый цвет
+            // Карточка участника
+            var card = document.createElement('div');
+            card.className = 'caller-card';
+
+            // Шапка (Имя)
+            var header = document.createElement('div');
+            header.className = 'caller-header';
+            header.innerHTML = '<span class="material-icons caller-icon">graphic_eq</span> <span>' + pid + '</span>';
+// Управление громкостью
+            var controls = document.createElement('div');
+            controls.className = 'volume-control';
+
+            var slider = document.createElement('input');
+            slider.type = 'range';
+            slider.className = 'volume-slider';
+            slider.min = 0;
+            slider.max = 200; // 200% громкости
+            slider.value = 100;
             
-            // Иконка
-            var icon = document.createElement('span');
-            icon.className = 'material-icons';
-            icon.style.fontSize = '14px';
-icon.innerText = 'volume_up';
+            // Если мы уже меняли громкость этому человеку, вернем значение
+            if (peerAudioNodes[pid] && peerAudioNodes[pid].gain) {
+                slider.value = peerAudioNodes[pid].gain.gain.value * 100;
+            }
+
+            var label = document.createElement('span');
+            label.className = 'volume-label';
+            label.innerText = slider.value + '%';
+
+            // Событие движения ползунка
+            slider.addEventListener('input', function(e) {
+                var val = e.target.value;
+                label.innerText = val + '%';
+                // Конвертируем 0-200 в 0.0-2.0
+                setPeerVolume(pid, val / 100); 
+            });
+
+            controls.appendChild(slider);
+            controls.appendChild(label);
             
-            var name = document.createElement('span');
-            name.innerText = pid;
-            
-            p.appendChild(icon);
-            p.appendChild(name);
-            els.callParticipants.appendChild(p);
+            card.appendChild(header);
+            card.appendChild(controls);
+
+            els.callParticipants.appendChild(card);
         });
+    }
+}
+
+// Функция установки громкости (Web Audio API)
+function setPeerVolume(peerId, value) {
+    if (peerAudioNodes[peerId] && peerAudioNodes[peerId].gain) {
+        peerAudioNodes[peerId].gain.gain.value = value;
     }
 }
 
@@ -163,6 +199,34 @@ function setupEventListeners() {
         applyTheme(e.target.value);
     });
     if (els.avatarInput) els.avatarInput.addEventListener('change', handleAvatarChange);
+    // === Мобильное меню ===
+    var btnToggle = document.getElementById('btn-toggle-sidebar');
+    var btnClose = document.getElementById('btn-close-sidebar');
+    var sidebar = document.querySelector('.sidebar');
+
+    if (btnToggle && sidebar) {
+        btnToggle.addEventListener('click', function() {
+            sidebar.classList.add('active');
+        });
+    }
+
+    if (btnClose && sidebar) {
+        btnClose.addEventListener('click', function() {
+            sidebar.classList.remove('active');
+        });
+    }
+
+    // Закрывать меню, если кликнули по чату (удобно)
+    var chatArea = document.querySelector('.chat-area');
+    if (chatArea && sidebar) {
+        chatArea.addEventListener('click', function() {
+            // Если меню открыто, клик по чату закроет его
+            if (sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+            }
+        });
+    }
+
 }
 
 function applyTheme(themeName) {
@@ -171,7 +235,6 @@ function applyTheme(themeName) {
     appSettings.theme = themeName;
     saveSettings();
 }
-
 // === Логика Аватарок ===
 function handleAvatarChange(e) {
     var file = e.target.files[0];
@@ -206,7 +269,7 @@ function broadcastMyAvatar() {
     });
 }
 
-// === P2P Logic ===
+// === P2P Logic (Твой оригинальный код) ===
 function registerAndInitPeer() {
     var inputId = els.myIdInput.value.trim();
     if (!inputId) {
@@ -216,7 +279,8 @@ function registerAndInitPeer() {
 
     els.btnLogin.disabled = true;
     els.btnLogin.innerText = 'Подключение...';
-peer = new Peer(inputId, {
+    
+    peer = new Peer(inputId, {
         debug: 1,
         config: {
             'iceServers': [
@@ -252,8 +316,6 @@ peer = new Peer(inputId, {
             call.answer(myStream);
             setupMediaCallHandlers(call);
         } else {
-            // Если мы не в звонке, можно либо отклонить, либо принять (здесь авто-отклонение для простоты)
-            // Но лучше уведомить пользователя.
             log('Пропущен звонок от ' + call.peer + ' (начните звонок, чтобы ответить)', 'error');
             call.close();
         }
@@ -301,20 +363,64 @@ function handlePeerDisconnect(peerId) {
         log('Отключен: ' + peerId, "error");
         delete connections[peerId];
     }
+    
+    // Если этот пир был в звонке - удаляем аудио
+    if (mediaCalls[peerId]) {
+        mediaCalls[peerId].close();
+        cleanupPeerAudio(peerId);
+        delete mediaCalls[peerId];
+    }
+    
     updateConnectionCount();
+    updateCallParticipantsList();
+    
     if (Object.keys(connections).length === 0) {
         updateChatUIState(false);
         if (myStream) endMeshCall();
     }
 }
+// === Новая функция для проигрывания звука ===
+function playNotification() {
+    var audio = document.getElementById('notify-sound');
+    if (audio) {
+        // Сбрасываем время, чтобы звук играл с начала, если сообщения приходят часто
+        audio.currentTime = 0; 
+        // Запускаем
+        audio.play().catch(function(e) {
+            console.log("Автовоспроизведение заблокировано браузером (нужен клик по странице):", e);
+        });
+    }
+}
 
+// === Обновленная функция обработки данных ===
 function handleIncomingData(data) {
+    // Флаг: нужно ли уведомление? (По умолчанию false)
+    var needNotify = false;
+
     if (data.type === 'chat') {
         addMessageToUI(data.from, data.text, 'in');
+        needNotify = true; // Пришло сообщение
     } else if (data.type === 'image') {
         addImageToUI(data.from, data.data, 'in');
+        needNotify = true; // Пришла картинка
     } else if (data.type === 'avatar-update') {
         peerAvatars[data.from] = data.data;
+    }
+
+    // Если пришло сообщение И вкладка сейчас скрыта (свернута или фоновая)
+    if (needNotify && document.hidden) {
+        playNotification();
+        
+        // Дополнительный бонус: мигание заголовка вкладки
+        var oldTitle = document.title;
+        document.title = "📩 Новое сообщение!";
+        
+        // Возвращаем заголовок, когда пользователь вернется на вкладку
+        var onFocus = function() {
+            document.title = oldTitle;
+            window.removeEventListener('focus', onFocus);
+        };
+        window.addEventListener('focus', onFocus);
     }
 }
 
@@ -357,8 +463,12 @@ function broadcastData(dataObj) {
         if (conn && conn.open) conn.send(dataObj);
     });
 }
-// === Звонки ===
+
+// === Звонки (С интеграцией Web Audio API) ===
 function startMeshCall() {
+    // Разблокируем аудио-контекст (нужно для Chrome)
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
     navigator.mediaDevices.getUserMedia({ audio: true, video: false })
         .then(function(stream) {
             myStream = stream;
@@ -383,7 +493,10 @@ function endMeshCall() {
         myStream = null;
     }
     Object.values(mediaCalls).forEach(function(call) { call.close(); });
-    mediaCalls = {}; // Очистка списка звонков
+    // Чистим аудио узлы
+    Object.keys(peerAudioNodes).forEach(cleanupPeerAudio);
+    
+    mediaCalls = {}; 
     els.remoteAudioContainer.innerHTML = '';
     els.btnStartCall.classList.remove('hidden');
     els.btnEndCall.classList.add('hidden');
@@ -396,20 +509,49 @@ function setupMediaCallHandlers(call) {
     updateCallParticipantsList();
 
     call.on('stream', function(remoteStream) {
-        var audio = document.createElement('audio');
-        audio.id = 'audio-' + pid;
-        audio.autoplay = true;
-        audio.srcObject = remoteStream;
-        els.remoteAudioContainer.appendChild(audio);
-        audio.play().catch(function(e){});
+        // Создаем скрытый элемент для потока
+        var audioEl = document.createElement('audio');
+        audioEl.srcObject = remoteStream;
+        audioEl.autoplay = true;
+        // Глушим сам элемент, так как звук пойдет через усилитель (GainNode)
+        audioEl.muted = true; 
+        els.remoteAudioContainer.appendChild(audioEl);
+
+        // --- Подключаем Web Audio API ---
+        // 1. Берем звук из потока
+        var source = audioCtx.createMediaStreamSource(remoteStream);
+        // 2. Создаем усилитель
+        var gainNode = audioCtx.createGain();
+        gainNode.gain.value = 1.0; // По умолчанию 100%
+        // 3. Соединяем: Поток -> Усилитель -> Колонки
+        source.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        // Сохраняем ссылки для управления
+        peerAudioNodes[pid] = {
+            source: source,
+            gain: gainNode,
+            audioEl: audioEl
+        };
+        
+        // Обновляем список, чтобы ползунок заработал
+        updateCallParticipantsList();
     });
 
     call.on('close', function() {
-        var el = document.getElementById('audio-' + pid);
-        if (el) el.remove();
+        cleanupPeerAudio(pid);
         delete mediaCalls[pid];
         updateCallParticipantsList();
     });
+}
+function cleanupPeerAudio(pid) {
+    if (peerAudioNodes[pid]) {
+        var nodes = peerAudioNodes[pid];
+        if (nodes.source) nodes.source.disconnect();
+        if (nodes.gain) nodes.gain.disconnect();
+        if (nodes.audioEl) nodes.audioEl.remove();
+        delete peerAudioNodes[pid];
+    }
 }
 
 // === UI Helpers ===
@@ -468,7 +610,6 @@ function addMessageToUI(author, text, type) {
     appendToChat(obj.row);
 }
 
-// Эта функция была сломана, восстановлена:
 function addImageToUI(author, base64, type) {
     var obj = createMsgRow(author, type);
     var img = document.createElement('img');
@@ -493,6 +634,7 @@ function appendToChat(el) {
         els.msgContainer.scrollTop = els.msgContainer.scrollHeight;
     }
 }
+
 function log(text, type) {
     var div = document.createElement('div');
     div.className = 'log-item ' + (type || 'info');
