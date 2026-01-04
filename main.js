@@ -216,27 +216,49 @@ function broadcastMyAvatar() {
     });
 }
 
-// === P2P Logic (ВОССТАНОВЛЕНА РАБОЧАЯ ВЕРСИЯ) ===
+// === P2P Logic (MAXIMUM AGGRESSION) ===
+
+// 1. Супер-список серверов для пробива NAT
+var aggressiveIceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.ekiga.net' },
+    { urls: 'stun:stun.ideasip.com' },
+    { urls: 'stun:stun.schlund.de' },
+    { urls: 'stun:stun.voiparound.com' },
+    { urls: 'stun:stun.voipbuster.com' },
+    { urls: 'stun:stun.voipstunt.com' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
+];
+
 function registerAndInitPeer() {
     var id = els.myIdInput.value.trim();
     if (!id) return log("Введите ID!", "error");
 
     els.btnLogin.disabled = true;
-    els.btnLogin.innerText = 'Подключение...';
+    els.btnLogin.innerText = 'Инициализация...';
 
-    // Тот самый список серверов
-    var ice = [
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
-    ];
+    // 2. Уничтожаем старый пир, если он был (чистим хвосты)
+    if (peer) {
+        peer.destroy();
+        peer = null;
+    }
 
     peer = new Peer(id, {
         host: '0.peerjs.com',
         port: 443,
         path: '/',
-        secure: true, // ВАЖНО для GitHub
-        debug: 1,
-        config: { iceServers: ice, sdpSemantics: 'unified-plan' },
+        secure: true,
+        debug: 1, // Меньше мусора в консоли, только важное
+        config: {
+            iceServers: aggressiveIceServers,
+            sdpSemantics: 'unified-plan',
+            iceTransportPolicy: 'all', // Разрешаем всё (и TCP и UDP)
+            iceCandidatePoolSize: 10   // Заранее готовим кандидатов для скорости
+        },
         pingInterval: 5000
     });
 
@@ -252,28 +274,120 @@ function registerAndInitPeer() {
         console.error(err);
         var msg = "Ошибка: " + err.type;
         if (err.type === 'unavailable-id') msg = "ID уже занят.";
-        if (err.type === 'peer-unavailable') msg = "Пользователь не найден.";
-        if (err.type === 'network') msg = "Ошибка сети (или VPN).";
+        if (err.type === 'peer-unavailable') msg = "Пользователь не найден (или NAT блокирует).";
+        if (err.type === 'network') msg = "Проблема с сетью/VPN.";
+        if (err.type === 'disconnected') msg = "Отключено от сервера.";
         
         log(msg, "error");
-        els.btnLogin.disabled = false;
-        els.btnLogin.innerText = 'Попробовать снова';
+        
+        // Авто-реконнект к серверу PeerJS при разрыве
+        if (err.type === 'network' || err.type === 'disconnected') {
+            log("Пробую переподключиться к серверу...", "info");
+            setTimeout(function() { if(peer) peer.reconnect(); }, 3000);
+        } else {
+            els.btnLogin.disabled = false;
+            els.btnLogin.innerText = 'Попробовать снова';
+        }
     });
 
     peer.on('connection', function(c) {
-        log('Входящее от: ' + c.peer);
+        log('⚡ Входящий сигнал от: ' + c.peer);
         setupConnectionHandlers(c);
     });
 
     peer.on('call', function(call) {
-        log('Звонок от ' + call.peer);
+        log('📞 Звонок от ' + call.peer);
         if (myStream) {
             call.answer(myStream);
             setupMediaCallHandlers(call);
         } else {
-            log('Пропущен звонок от ' + call.peer + ' (начните звонок, чтобы ответить)', 'info');
+            log('Пропущен звонок от ' + call.peer + ' (сначала нажмите Start)', 'info');
         }
     });
+}
+
+function connectToPeer() {
+    var rid = els.remoteIdInput.value.trim();
+    if (!rid || rid === myId) return;
+
+    log('⏳ Попытка пробиться к: ' + rid + '...');
+    
+    // 3. Агрессивные настройки соединения
+    var conn = peer.connect(rid, {
+        reliable: true,         // Гарантированная доставка
+        serialization: 'json',  // Иногда стабильнее, чем binary
+        metadata: { info: 'connect-request' }
+    });
+
+    // 4. Трюк с тайм-аутом (Если через 8 сек не подключилось - пробуем снова)
+    var connectionTimer = setTimeout(function() {
+        if (!conn.open) {
+            log("⚠️ Долгое подключение... Попробуйте еще раз или смените сеть (Wi-Fi <-> 4G).", "error");
+            conn.close();
+        }
+    }, 8000);
+
+    setupConnectionHandlers(conn, connectionTimer);
+}
+function setupConnectionHandlers(conn, timerId) {
+    conn.on('open', function() {
+        if (timerId) clearTimeout(timerId); // Отменяем таймер паники
+        
+        if (connections[conn.peer]) return; // Уже подключены
+        
+        connections[conn.peer] = conn;
+        updateConnectionCount();
+        log('✅ КАНАЛ ОТКРЫТ: ' + conn.peer, "success");
+        updateChatUIState(true);
+        
+        // Сразу шлем свои данные
+        conn.send({type: 'avatar-update', from: myId, data: appSettings.avatar});
+        
+        // Пинг-понг для поддержания жизни канала
+        keepAlive(conn);
+    });
+
+    conn.on('data', handleIncomingData);
+    
+    conn.on('close', function() { 
+        handlePeerDisconnect(conn.peer); 
+    });
+    
+    conn.on('error', function(err) {
+        console.error("Conn Error:", err);
+        // Не пишем ошибку в лог пользователю, чтобы не пугать, просто пробуем закрыть
+        handlePeerDisconnect(conn.peer);
+    });
+}
+
+// 5. Функция поддержания жизни (Keep-Alive)
+// Некоторые роутеры закрывают "молчащие" каналы. Мы будем шуметь.
+function keepAlive(conn) {
+    var pingInterval = setInterval(function() {
+        if (conn.open) {
+            conn.send({type: 'ping'});
+        } else {
+            clearInterval(pingInterval);
+        }
+    }, 10000); // Каждые 10 секунд
+}
+
+function handlePeerDisconnect(pid) {
+    if (connections[pid]) {
+        log('❌ Связь потеряна: ' + pid, "error");
+        delete connections[pid];
+    }
+    if (mediaCalls[pid]) {
+        mediaCalls[pid].close();
+        cleanupPeerAudio(pid);
+        delete mediaCalls[pid];
+    }
+    updateConnectionCount();
+    updateCallParticipantsList();
+    if (Object.keys(connections).length === 0) {
+        updateChatUIState(false);
+        if (myStream) endMeshCall();
+    }
 }
 
 function connectToPeer() {
@@ -324,6 +438,7 @@ function playNotification() {
     }
 }
 function handleIncomingData(data) {
+    if (data.type === 'ping') return; // Игнорируем технические пакеты
     var needNotify = false;
     
     if (data.type === 'chat') {
