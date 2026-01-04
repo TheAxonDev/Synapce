@@ -43,7 +43,7 @@ var els = {
     avatarInput: document.getElementById('avatar-input'),
     settingsAvatarPreview: document.getElementById('settings-avatar-preview'),
     callParticipants: null,
-    // Мобильные кнопки (Восстановлено)
+    // Мобильные кнопки
     btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
     btnCloseSidebar: document.getElementById('btn-close-sidebar'),
     sidebar: document.getElementById('sidebar')
@@ -59,14 +59,12 @@ function init() {
     }
 }
 
-// Создание зоны для отображения участников звонка (С ЗАЩИТОЙ ОТ ДУБЛЕЙ)
+// Создание зоны для списка участников
 function createCallListUI() {
-    // Исправление: Если список уже есть, не создаем его заново
     if (document.getElementById('active-callers-list')) {
         els.callParticipants = document.getElementById('active-callers-list');
         return;
     }
-
     var sidebarContent = document.querySelector('.sidebar-content');
     if (sidebarContent) {
         var div = document.createElement('div');
@@ -82,10 +80,9 @@ function createCallListUI() {
     }
 }
 
-// Обновление списка участников с ползунками
+// Обновление списка (с ползунками)
 function updateCallParticipantsList() {
     if (!els.callParticipants) return;
-    
     var peersInCall = Object.keys(mediaCalls);
     
     if (peersInCall.length === 0) {
@@ -96,11 +93,11 @@ function updateCallParticipantsList() {
         peersInCall.forEach(function(pid) {
             var card = document.createElement('div');
             card.className = 'caller-card';
-var header = document.createElement('div');
+
+            var header = document.createElement('div');
             header.className = 'caller-header';
             header.innerHTML = '<span class="material-icons caller-icon">graphic_eq</span> <span>' + pid + '</span>';
-
-            var controls = document.createElement('div');
+var controls = document.createElement('div');
             controls.className = 'volume-control';
 
             var slider = document.createElement('input');
@@ -178,36 +175,15 @@ function setupEventListeners() {
     if (els.themeSelect) els.themeSelect.addEventListener('change', function(e) { applyTheme(e.target.value); });
     if (els.avatarInput) els.avatarInput.addEventListener('change', handleAvatarChange);
 
-    // === МОБИЛЬНОЕ МЕНЮ (Восстановлено!) ===
-    if (els.btnToggleSidebar && els.sidebar) {
-        els.btnToggleSidebar.addEventListener('click', function() {
-            els.sidebar.classList.add('active');
-        });
-    }
-
-    if (els.btnCloseSidebar && els.sidebar) {
-        els.btnCloseSidebar.addEventListener('click', function() {
-            els.sidebar.classList.remove('active');
-        });
-    }
-// ... внутри setupEventListeners ...
-
-    // === ПРОСТОЕ ПЕРЕКЛЮЧЕНИЕ МЕНЮ ===
-    // Кнопка "Три полоски" в чате
+    // === МОБИЛЬНОЕ МЕНЮ (ПРОСТОЕ ПЕРЕКЛЮЧЕНИЕ) ===
     if (els.btnToggleSidebar) {
         els.btnToggleSidebar.onclick = function() {
-            if (els.sidebar) {
-                els.sidebar.classList.add('active'); // Показать меню
-            }
+            if (els.sidebar) els.sidebar.classList.add('active');
         };
     }
-
-    // Кнопка "Назад" (стрелочка) внутри меню
     if (els.btnCloseSidebar) {
         els.btnCloseSidebar.onclick = function() {
-            if (els.sidebar) {
-                els.sidebar.classList.remove('active'); // Скрыть меню
-            }
+            if (els.sidebar) els.sidebar.classList.remove('active');
         };
     }
 }
@@ -218,7 +194,6 @@ function applyTheme(name) {
     appSettings.theme = name;
     saveSettings();
 }
-
 function handleAvatarChange(e) {
     var file = e.target.files[0];
     if (!file || !file.type.startsWith('image/')) return;
@@ -241,7 +216,7 @@ function broadcastMyAvatar() {
     });
 }
 
-// === P2P Logic ===
+// === P2P Logic (ВОССТАНОВЛЕНА РАБОЧАЯ ВЕРСИЯ) ===
 function registerAndInitPeer() {
     var id = els.myIdInput.value.trim();
     if (!id) return log("Введите ID!", "error");
@@ -249,7 +224,7 @@ function registerAndInitPeer() {
     els.btnLogin.disabled = true;
     els.btnLogin.innerText = 'Подключение...';
 
-    // Настройки для GitHub Pages + РФ
+    // Тот самый список серверов
     var ice = [
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' }
@@ -259,7 +234,7 @@ function registerAndInitPeer() {
         host: '0.peerjs.com',
         port: 443,
         path: '/',
-        secure: true,
+        secure: true, // ВАЖНО для GitHub
         debug: 1,
         config: { iceServers: ice, sdpSemantics: 'unified-plan' },
         pingInterval: 5000
@@ -297,7 +272,6 @@ function registerAndInitPeer() {
             setupMediaCallHandlers(call);
         } else {
             log('Пропущен звонок от ' + call.peer + ' (начните звонок, чтобы ответить)', 'info');
-            // Опционально: можно тут же вызвать playNotification()
         }
     });
 }
@@ -324,7 +298,7 @@ function setupConnectionHandlers(conn) {
 }
 
 function handlePeerDisconnect(pid) {
-if (connections[pid]) {
+    if (connections[pid]) {
         log('Отключен: ' + pid, "error");
         delete connections[pid];
     }
@@ -349,7 +323,6 @@ function playNotification() {
         audio.play().catch(function(e){});
     }
 }
-
 function handleIncomingData(data) {
     var needNotify = false;
     
@@ -402,7 +375,6 @@ function broadcastData(d) {
 }
 
 // === ЗВОНКИ ===
-
 function startMeshCall() {
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
@@ -454,7 +426,8 @@ function setupMediaCallHandlers(call) {
         gainNode.gain.value = 1.0; 
         source.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-peerAudioNodes[pid] = {
+
+        peerAudioNodes[pid] = {
             source: source,
             gain: gainNode,
             audioEl: audioEl
@@ -479,7 +452,6 @@ function cleanupPeerAudio(pid) {
         delete peerAudioNodes[pid];
     }
 }
-
 // === UI ===
 function updateChatUIState(isActive) {
     var count = Object.keys(connections).length;
